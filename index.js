@@ -29,11 +29,11 @@ async function run() {
 
     const database= client.db('scholarstream')
     const userCollections = database.collection('user')
+    const scholarshipsCollection = database.collection('scholarships')
 
     app.post('/users',async(req,res)=>{
-
       const userInfo=req.body
-      userInfo.role="Student"
+     
       userInfo.createdAt = new Date();
 
       const result= await userCollections.insertOne(userInfo)
@@ -44,6 +44,15 @@ async function run() {
 
     app.get('/users/role/:email',async(req,res)=>{
       const{email} = req.params;
+
+    //ScholarShip
+
+    app.post('/scholarships',async(req,res)=>{
+      const data=req.body;
+      data.createdAt=new Date();
+      const result= await scholarshipsCollection.insertOne(data)
+      res.send(result)
+    })
 
 
   const query = { email: email };
