@@ -104,6 +104,23 @@ app.put('/scholarships/:id', async (req, res) => {
 });
 
 
+// Get Single Scholarship by ID
+app.get('/scholarships/:id', async (req, res) => {
+  const id = req.params.id;
+
+  
+    const query = { _id: new ObjectId(id) };
+    const result = await scholarshipsCollection.findOne(query);
+
+    if (!result) {
+      return res.status(404).send({ message: "Scholarship not found" });
+    }
+
+    res.send(result);
+  
+  })
+
+
   
     
     await client.db("admin").command({ ping: 1 });
