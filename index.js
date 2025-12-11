@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.URI;
 
 
@@ -45,6 +45,14 @@ async function run() {
     app.get('/users/role/:email',async(req,res)=>{
       const{email} = req.params;
 
+      const query = { email: email };
+  const result = await userCollections.findOne(query);
+
+  console.log("User Found:", result);
+  res.send(result);
+      
+    })
+
     //ScholarShip
 
     app.post('/scholarships',async(req,res)=>{
@@ -52,16 +60,51 @@ async function run() {
       data.createdAt=new Date();
       const result= await scholarshipsCollection.insertOne(data)
       res.send(result)
+    });
+
+   app.get('/scholarships', async (req, res) => {
+  try {
+    const result = await scholarshipsCollection.find({}).toArray();
+    res.send(result);
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+
+    app.get('/manage/scholarship/:email',async(req,res)=>{
+      const email=req.params.email;
+      const query= {userEmail : email}
+      const result =await scholarshipsCollection.find(query).toArray()
+      res.send(result)
     })
 
+    //Manage Scholarship
 
-  const query = { email: email };
-  const result = await userCollections.findOne(query);
-
-  console.log("User Found:", result);
+  // Delete
+app.delete('/scholarships/:id', async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) }; 
+  const result = await scholarshipsCollection.deleteOne(query);
   res.send(result);
-      
-    })
+});
+
+
+app.put('/scholarships/:id', async (req, res) => {
+  const id = req.params.id;
+  const updatedData = req.body;
+
+  const filter = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: updatedData,
+  };
+
+  const result = await scholarshipsCollection.updateOne(filter, updateDoc);
+  res.send(result);
+});
+
+
+  
     
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
