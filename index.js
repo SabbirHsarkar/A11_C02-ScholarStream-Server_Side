@@ -1,3 +1,5 @@
+
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express= require('express');
 const cors= require('cors');
 require('dotenv').config();
@@ -8,9 +10,44 @@ const app=express();
 app.use(cors());
 app.use(express.json());
 
+const admin = require("firebase-admin");
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
+const verifyFBToken= async(req,res,next)=>{
+  const token=req.headers.authorization;
+
+  if(!token){
+    return res.status(401).send({message:'Unauthorized access'})
+  }
+try{
+const idToken=token.split(' ')[1]
+const decoded=await admin.auth().verifyIdToken(idToken)
+console.log("decoded",decoded);
+req.decoded_email=decoded.email;
+next();
+
+}
+catch(error){
+return res.status(401).send({message:'Unauthorized access'})
+}
+
+}
+
+
+
+
+
+
+
+
+
 const uri = process.env.URI;
 
 
@@ -55,12 +92,13 @@ async function run() {
 
     //ScholarShip
 
-    app.post('/scholarships',async(req,res)=>{
+    app.post('/scholarships',verifyFBToken,async(req,res)=>{
       const data=req.body;
       data.createdAt=new Date();
       const result= await scholarshipsCollection.insertOne(data)
       res.send(result)
     });
+
 
    app.get('/scholarships', async (req, res) => {
   try {
@@ -113,7 +151,7 @@ app.get('/scholarships/:id', async (req, res) => {
     const result = await scholarshipsCollection.findOne(query);
 
     if (!result) {
-      return res.status(404).send({ message: "Scholarship not found" });
+      return res.status(404).send({ message: "Not found" });
     }
 
     res.send(result);
