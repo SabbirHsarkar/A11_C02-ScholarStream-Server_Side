@@ -40,6 +40,18 @@ return res.status(401).send({message:'Unauthorized access'})
 
 }
 
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded_email;
+
+  const user = await userCollections.findOne({ email });
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
+  next();
+};
+
 
 
 
@@ -77,6 +89,30 @@ async function run() {
       res.send(result);
 
     })
+ 
+
+    app.get('/users',verifyFBToken,async(req,res)=>{
+     
+      const result= await userCollections.find().toArray();
+      res.status(200).send(result);
+
+    })
+
+    app.patch('/users/role/:id', verifyFBToken, async (req, res) => {
+  const id = req.params.id;
+  const { role } = req.body;
+
+  const filter = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: { role },
+  };
+
+  const result = await userCollections.updateOne(filter, updateDoc);
+  res.send(result);
+});
+
+
+
 
 
     app.get('/users/role/:email',async(req,res)=>{
@@ -157,6 +193,19 @@ app.get('/scholarships/:id', async (req, res) => {
     res.send(result);
   
   })
+
+
+  //All Users delete
+
+  app.delete('/users/:id', verifyFBToken,verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+
+  const query = { _id: new ObjectId(id) };
+  const result = await userCollections.deleteOne(query);
+
+  res.send(result);
+});
+
 
 
   
