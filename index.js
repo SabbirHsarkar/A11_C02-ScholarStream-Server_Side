@@ -6,6 +6,9 @@ require('dotenv').config();
 
 const port =process.env.PORT || 5000 ;
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
+const crypto =require('crypto');
+
 const app=express();
 app.use(cors());
 app.use(express.json());
@@ -324,7 +327,68 @@ app.delete("/applications/:id", verifyFBToken, async (req, res) => {
 });
 
 
+//payments
 
+app.post("/create-payment-checkout", async (req, res) => {
+  try {
+    const { totalAmount, applicationId, userEmail } = req.body;
+
+    const amount = Number(totalAmount);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).send({ message: "Invalid totalAmount" });
+    }
+
+    if (!userEmail || typeof userEmail !== "string") {
+      return res.status(400).send({ message: "Invalid userEmail" });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: userEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Scholarship Application Fee",
+            },
+            unit_amount: Math.round(amount * 100), 
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/dashboard/payment-success/${applicationId}`,
+      cancel_url: `${process.env.CLIENT_URL}/payment-failed`,
+    });
+
+    res.send({ url: session.url });
+  } catch (error) {
+    console.error("Stripe Error:", error);
+    res.status(500).send({ message: error.message });
+  }
+});
+
+
+
+
+
+//DB route
+app.patch("/applications/payment/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const result = await applicationsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        paymentStatus: "paid",
+        paidAt: new Date(),
+      },
+    }
+  );
+
+  res.send(result);
+});
 
 
 
