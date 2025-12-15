@@ -85,6 +85,8 @@ async function run() {
     const userCollections = database.collection('user')
     const scholarshipsCollection = database.collection('scholarships')
     const applicationsCollection = database.collection("applications");
+    const reviewsCollection = database.collection("reviews");
+
 
     app.post('/users',async(req,res)=>{
       const userInfo=req.body
@@ -388,6 +390,59 @@ app.patch("/applications/payment/:id", async (req, res) => {
   );
 
   res.send(result);
+});
+
+
+
+
+// Add Review
+app.post("/reviews", verifyFBToken, async (req, res) => {
+  const {
+    scholarshipId,
+    universityName,
+    userName,
+    userEmail,
+    userImage,
+    ratingPoint,
+    reviewComment,
+  } = req.body;
+
+  if (!scholarshipId || !userEmail || !ratingPoint || !reviewComment) {
+    return res.status(400).send({ success: false, message: "Missing required fields" });
+  }
+
+  const review = {
+    scholarshipId,
+    universityName,
+    userName,
+    userEmail,
+    userImage: userImage || "",
+    ratingPoint,
+    reviewComment,
+    reviewDate: new Date(),
+  };
+
+  try {
+    const result = await reviewsCollection.insertOne(review);
+    res.send({ success: true, message: "Review added successfully", data: result });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ success: false, message: "Server error" });
+  }
+});
+
+
+
+// Get Reviews by Scholarship
+app.get("/reviews/:scholarshipId", async (req, res) => {
+  const { scholarshipId } = req.params;
+  try {
+    const reviews = await reviewsCollection.find({ scholarshipId }).toArray();
+    res.send(reviews);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
 });
 
 
