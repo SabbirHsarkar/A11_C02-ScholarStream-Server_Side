@@ -447,6 +447,64 @@ app.get("/reviews/:scholarshipId", async (req, res) => {
 
 
 
+//My Review
+//fetch all user
+app.get("/reviews/user/:email", verifyFBToken, async (req, res) => {
+  const { email } = req.params;
+  try {
+    const reviews = await reviewsCollection.find({ userEmail: email }).toArray();
+    res.send(reviews);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+
+
+
+//update
+
+
+app.patch("/reviews/:id", verifyFBToken, async (req, res) => {
+  const { id } = req.params;
+  const { ratingPoint, reviewComment } = req.body;
+
+  try {
+    const result = await reviewsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { ratingPoint, reviewComment, updatedAt: new Date() } }
+    );
+    if(result.modifiedCount > 0){
+      res.send({ success: true, message: "Review updated" });
+    } else {
+      res.status(400).send({ success: false, message: "Could not update" });
+    }
+  } catch(err){
+    console.log(err);
+    res.status(500).send({ success: false, message: "Server error" });
+  }
+});
+
+//Delete
+
+app.delete("/reviews/:id", verifyFBToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await reviewsCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send(result);
+  } catch(err){
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+
+
+
+
+
+//
 
   
     
