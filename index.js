@@ -76,9 +76,12 @@ async function run() {
    
     await client.connect();
 
+    //Database Collection
+
     const database= client.db('scholarstream')
     const userCollections = database.collection('user')
     const scholarshipsCollection = database.collection('scholarships')
+    const applicationsCollection = database.collection("applications");
 
     app.post('/users',async(req,res)=>{
       const userInfo=req.body
@@ -205,6 +208,124 @@ app.get('/scholarships/:id', async (req, res) => {
 
   res.send(result);
 });
+
+
+//Moderator Section
+
+
+// GET: All Applications for moderator
+
+app.get("/applications", verifyFBToken, async (req, res) => {
+  try {
+    const email = req.decoded_email;
+
+    // Check if user 
+    const user = await userCollections.findOne({ email });
+    if (!user || user.role !== "moderator") {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+
+    const applications = await applicationsCollection.find().toArray();
+    res.send(applications);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+// PATCH: Update Feedback
+
+app.patch("/applications/feedback/:id", verifyFBToken, async (req, res) => {
+  const id = req.params.id;
+  const { feedback } = req.body;
+
+  try {
+    const result = await applicationsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { feedback } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.send({ success: true, message: "Feedback updated" });
+    } else {
+      res.status(400).send({ success: false, message: "Could not update feedback" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ success: false, message: "Server error" });
+  }
+});
+
+
+// PATCH: Update Status
+
+app.patch("/applications/status/:id", verifyFBToken, async (req, res) => {
+  const id = req.params.id;
+  const { status } = req.body;
+
+  const validStatuses = ["pending", "processing", "completed", "rejected"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).send({ success: false, message: "Invalid status" });
+  }
+
+  try {
+    const result = await applicationsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { applicationStatus: status } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.send({ success: true, message: `Status updated to ${status}` });
+    } else {
+      res.status(400).send({ success: false, message: "Could not update status" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ success: false, message: "Server error" });
+  }
+});
+
+
+
+
+
+//Student Application
+app.post("/applications", async (req, res) => {
+  const application = req.body;
+  application.applicationStatus = "pending";   
+  application.paymentStatus = "unpaid"; 
+  const result = await applicationsCollection.insertOne(application);
+  res.send(result);
+});
+
+//get my-application
+
+app.get("/applications/my", verifyFBToken, async (req, res) => {
+  const email = req.decoded_email; 
+  const result = await applicationsCollection
+    .find({ userEmail: email }) 
+    .toArray();
+  res.send(result);
+});
+
+
+//delete
+app.delete("/applications/:id", verifyFBToken, async (req, res) => {
+  const id = req.params.id;
+  const email = req.decoded_email; 
+
+  const result = await applicationsCollection.deleteOne({
+    _id: new ObjectId(id),
+    userEmail: email,
+    applicationStatus: "pending"
+  });
+
+  res.send(result);
+});
+
+
+
+
 
 
 
