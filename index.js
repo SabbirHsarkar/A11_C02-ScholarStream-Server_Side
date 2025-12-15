@@ -399,6 +399,7 @@ app.patch("/applications/payment/:id", async (req, res) => {
 app.post("/reviews", verifyFBToken, async (req, res) => {
   const {
     scholarshipId,
+   scholarshipName,
     universityName,
     userName,
     userEmail,
@@ -412,7 +413,9 @@ app.post("/reviews", verifyFBToken, async (req, res) => {
   }
 
   const review = {
+
     scholarshipId,
+    scholarshipName,
     universityName,
     userName,
     userEmail,
@@ -498,6 +501,27 @@ app.delete("/reviews/:id", verifyFBToken, async (req, res) => {
     res.status(500).send({ message: "Server error" });
   }
 });
+
+
+//Moderator- All Review
+
+// Get all reviews (moderator only)
+app.get("/reviews", verifyFBToken, async (req, res) => {
+  const email = req.decoded_email;
+  try {
+    const user = await userCollections.findOne({ email });
+    if (!user || user.role !== "moderator") {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+
+    const reviews = await reviewsCollection.find().toArray();
+    res.send(reviews);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
 
 
 
