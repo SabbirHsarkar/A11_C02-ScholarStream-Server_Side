@@ -144,14 +144,59 @@ async function run() {
     });
 
 
-   app.get('/scholarships', async (req, res) => {
+//    app.get('/scholarships', async (req, res) => {
+//   try {
+//     const result = await scholarshipsCollection.find({}).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     console.log(err);
+//   }
+// });
+
+//Search Scholarship
+
+app.get("/scholarships", async (req, res) => {
   try {
-    const result = await scholarshipsCollection.find({}).toArray();
+    const { search, country, sort } = req.query;
+
+    let query = {};
+
+    // Search (Scholarship Name / University Name / Degree)
+    if (search) {
+      query.$or = [
+        { scholarshipName: { $regex: search, $options: "i" } },
+        { universityName: { $regex: search, $options: "i" } },
+        { degree: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Filter by Country
+    if (country) {
+      query.country = country;
+    }
+
+ 
+  
+
+    // Sorting
+    let sortOption = {};
+    if (sort === "fee_asc") sortOption.applicationFees = 1;
+    if (sort === "fee_desc") sortOption.applicationFees = -1;
+    if (sort === "date_asc") sortOption.createdAt = 1;
+    if (sort === "date_desc") sortOption.createdAt = -1;
+
+    const result = await scholarshipsCollection
+      .find(query)
+      .sort(sortOption)
+      .toArray();
+
     res.send(result);
   } catch (err) {
     console.log(err);
+    res.status(500).send({ message: "Server error" });
   }
 });
+
 
 
     app.get('/manage/scholarship/:email',async(req,res)=>{
