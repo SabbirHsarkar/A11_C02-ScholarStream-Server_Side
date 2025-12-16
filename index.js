@@ -155,13 +155,62 @@ async function run() {
 
 //Search Scholarship
 
+// app.get("/scholarships", async (req, res) => {
+//   try {
+//     const { search, country, sort } = req.query;
+
+//     let query = {};
+
+//     // Search (Scholarship Name / University Name / Degree)
+//     if (search) {
+//       query.$or = [
+//         { scholarshipName: { $regex: search, $options: "i" } },
+//         { universityName: { $regex: search, $options: "i" } },
+//         { degree: { $regex: search, $options: "i" } },
+//       ];
+//     }
+
+//     // Filter by Country
+//     if (country) {
+//       query.country = country;
+//     }
+
+ 
+  
+
+//     // Sorting
+//     let sortOption = {};
+//     if (sort === "fee_asc") sortOption.applicationFees = 1;
+//     if (sort === "fee_desc") sortOption.applicationFees = -1;
+//     if (sort === "date_asc") sortOption.createdAt = 1;
+//     if (sort === "date_desc") sortOption.createdAt = -1;
+
+//     const result = await scholarshipsCollection
+//       .find(query)
+//       .sort(sortOption)
+//       .toArray();
+
+//     res.send(result);
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({ message: "Server error" });
+//   }
+// });
+
+//Search , Filter, pagination
 app.get("/scholarships", async (req, res) => {
   try {
-    const { search, country, sort } = req.query;
+    const {
+      search,
+      country,
+      sort,
+      page = 1,
+      limit = 6,
+    } = req.query;
 
     let query = {};
 
-    // Search (Scholarship Name / University Name / Degree)
+    // Search
     if (search) {
       query.$or = [
         { scholarshipName: { $regex: search, $options: "i" } },
@@ -170,32 +219,41 @@ app.get("/scholarships", async (req, res) => {
       ];
     }
 
-    // Filter by Country
+    //  Country filter
     if (country) {
       query.country = country;
     }
 
- 
-  
-
-    // Sorting
+    // ↕ Sort
     let sortOption = {};
     if (sort === "fee_asc") sortOption.applicationFees = 1;
     if (sort === "fee_desc") sortOption.applicationFees = -1;
     if (sort === "date_asc") sortOption.createdAt = 1;
     if (sort === "date_desc") sortOption.createdAt = -1;
 
-    const result = await scholarshipsCollection
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const scholarships = await scholarshipsCollection
       .find(query)
       .sort(sortOption)
+      .skip(skip)
+      .limit(Number(limit))
       .toArray();
 
-    res.send(result);
+    const total = await scholarshipsCollection.countDocuments(query);
+
+    res.send({
+      scholarships,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+    });
   } catch (err) {
     console.log(err);
     res.status(500).send({ message: "Server error" });
   }
 });
+
 
 
 
@@ -258,6 +316,59 @@ app.get('/scholarships/:id', async (req, res) => {
 
   res.send(result);
 });
+
+
+//Analytics
+app.get("/analytics", verifyFBToken, async (req, res) => {
+  try {
+    // Total Users
+    const totalUsers = await userCollections.countDocuments();
+
+    // All scholarships
+    const scholarships = await scholarshipsCollection.find().toArray();
+    const totalScholarships = scholarships.length;
+
+    // Total Fees
+    const totalFees = scholarships.reduce((sum, s) => sum + (s.applicationFees || 0), 0);
+
+    // University-wise application counts
+    const chartDataMap = {};
+    for (const scholarship of scholarships) {
+      const count = await applicationsCollection.countDocuments({ scholarshipId: scholarship._id });
+      const key = scholarship.universityName || "Unknown";
+      chartDataMap[key] = (chartDataMap[key] || 0) + count;
+    }
+    const chartData = Object.keys(chartDataMap).map((key) => ({
+      name: key,
+      applications: chartDataMap[key],
+    }));
+
+    // Category-wise application counts
+    const chartDataCategoryMap = {};
+    for (const scholarship of scholarships) {
+      const count = await applicationsCollection.countDocuments({ scholarshipId: scholarship._id });
+      const key = scholarship.scholarshipCategory || "Unknown";
+      chartDataCategoryMap[key] = (chartDataCategoryMap[key] || 0) + count;
+    }
+    const chartDataCategory = Object.keys(chartDataCategoryMap).map((key) => ({
+      name: key,
+      applications: chartDataCategoryMap[key],
+    }));
+
+    res.send({
+      totalUsers,
+      totalFees,
+      totalScholarships,
+      chartData,          // University-wise
+      chartDataCategory,  // Category-wise
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+
 
 
 //Moderator Section
