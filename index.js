@@ -324,51 +324,64 @@ app.get("/analytics", verifyFBToken, async (req, res) => {
     // Total Users
     const totalUsers = await userCollections.countDocuments();
 
-    // All scholarships
-    const scholarships = await scholarshipsCollection.find().toArray();
-    const totalScholarships = scholarships.length;
+    // Total Scholarships
+    const totalScholarships = await scholarshipsCollection.countDocuments();
 
-    // Total Fees
-    const totalFees = scholarships.reduce((sum, s) => sum + (s.applicationFees || 0), 0);
+    // Total Fees Collected (ONLY paid applications)
+    const feesAgg = await applicationsCollection.aggregate([
+      { $match: { paymentStatus: "paid" } },
+      { $group: { _id: null, total: { $sum: "$applicationFees" } } }
+    ]).toArray();
 
-    // University-wise application counts
-    const chartDataMap = {};
-    for (const scholarship of scholarships) {
-      const count = await applicationsCollection.countDocuments({ scholarshipId: scholarship._id });
-      const key = scholarship.universityName || "Unknown";
-      chartDataMap[key] = (chartDataMap[key] || 0) + count;
-    }
-    const chartData = Object.keys(chartDataMap).map((key) => ({
-      name: key,
-      applications: chartDataMap[key],
-    }));
+    const totalFees = feesAgg[0]?.total || 0;
 
-    // Category-wise application counts
-    const chartDataCategoryMap = {};
-    for (const scholarship of scholarships) {
-      const count = await applicationsCollection.countDocuments({ scholarshipId: scholarship._id });
-      const key = scholarship.scholarshipCategory || "Unknown";
-      chartDataCategoryMap[key] = (chartDataCategoryMap[key] || 0) + count;
-    }
-    const chartDataCategory = Object.keys(chartDataCategoryMap).map((key) => ({
-      name: key,
-      applications: chartDataCategoryMap[key],
-    }));
+    // Applications per University
+    const universityChart = await applicationsCollection.aggregate([
+      {
+        $group: {
+          _id: "$universityName",
+          applications: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          applications: 1
+        }
+      }
+    ]).toArray();
+
+    //  Applications per Category
+    const categoryChart = await applicationsCollection.aggregate([
+      {
+        $group: {
+          _id: "$scholarshipCategory",
+          applications: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          applications: 1
+        }
+      }
+    ]).toArray();
 
     res.send({
       totalUsers,
       totalFees,
       totalScholarships,
-      chartData,          // University-wise
-      chartDataCategory,  // Category-wise
+      chartData: universityChart,
+      chartDataCategory: categoryChart
     });
+
   } catch (err) {
     console.log(err);
     res.status(500).send({ message: "Server error" });
   }
 });
-
-
 
 
 //Moderator Section
