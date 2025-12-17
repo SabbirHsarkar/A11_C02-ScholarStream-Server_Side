@@ -464,7 +464,7 @@ app.patch("/applications/status/:id", verifyFBToken, async (req, res) => {
 
 
 //Student Application
-app.post("/applications", async (req, res) => {
+app.post("/applications",verifyFBToken, async (req, res) => {
   const application = req.body;
   application.applicationStatus = "pending";   
   application.paymentStatus = "unpaid"; 
@@ -481,6 +481,28 @@ app.get("/applications/my", verifyFBToken, async (req, res) => {
     .toArray();
   res.send(result);
 });
+
+
+
+
+// Get single application by ID
+app.get('/applications/:myId', verifyFBToken, async (req, res) => {
+  try {
+    const id = req.params.myId;
+
+    const query = { _id: new ObjectId(id) };
+    const result = await applicationsCollection.findOne(query);
+
+    if (!result) {
+      return res.status(404).send({ message: "Application not found" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to get application" });
+  }
+});
+
 
 
 //delete
