@@ -43,17 +43,6 @@ return res.status(401).send({message:'Unauthorized access'})
 
 }
 
-const verifyAdmin = async (req, res, next) => {
-  const email = req.decoded_email;
-
-  const user = await userCollections.findOne({ email });
-
-  if (!user || user.role !== "admin") {
-    return res.status(403).send({ message: "Forbidden access" });
-  }
-
-  next();
-};
 
 
 
@@ -86,6 +75,22 @@ async function run() {
     const scholarshipsCollection = database.collection('scholarships')
     const applicationsCollection = database.collection("applications");
     const reviewsCollection = database.collection("reviews");
+
+   
+   
+    const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded_email;
+
+  const user = await userCollections.findOne({ email });
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
+  next();
+};
+
+
 
 
     app.post('/users',async(req,res)=>{
@@ -308,7 +313,7 @@ app.get('/scholarships/:id', async (req, res) => {
 
   //All Users delete
 
-  app.delete('/users/:id', verifyFBToken,verifyAdmin, async (req, res) => {
+  app.delete('/users/:id',verifyFBToken,verifyAdmin, async (req, res) => {
   const id = req.params.id;
 
   const query = { _id: new ObjectId(id) };
