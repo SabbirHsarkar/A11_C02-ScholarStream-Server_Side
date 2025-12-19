@@ -593,7 +593,7 @@ app.patch("/applications/payment/:id", async (req, res) => {
 
 
 // Add Review
-app.post("/reviews", verifyFBToken, async (req, res) => {
+app.post("/reviews",verifyFBToken,  async (req, res) => {
   const {
     scholarshipId,
    scholarshipName,
@@ -725,12 +725,13 @@ app.get("/reviews", verifyFBToken, async (req, res) => {
 
 
 
+
 //
 
   
     
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
     // await client.close();
