@@ -66,7 +66,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
    
-    await client.connect();
+    // await client.connect();
 
     //Database Collection
 
@@ -470,13 +470,51 @@ app.patch("/applications/status/:id", verifyFBToken, async (req, res) => {
 
 
 //Student Application
-app.post("/applications",verifyFBToken, async (req, res) => {
-  const application = req.body;
-  application.applicationStatus = "pending";   
-  application.paymentStatus = "unpaid"; 
+// app.post("/applications",verifyFBToken, async (req, res) => {
+//   const application = req.body;
+//   application.applicationStatus = "pending";   
+//   application.paymentStatus = "unpaid"; 
+//   const result = await applicationsCollection.insertOne(application);
+//   res.send(result);
+// });
+
+app.post("/applications", verifyFBToken, async (req, res) => {
+  const {
+    scholarshipId,
+    scholarshipName,   
+    universityName,
+    scholarshipCategory,
+    degree,
+    applicationFees,
+    serviceCharge,
+    userId,
+    userName,
+    userEmail,
+  } = req.body;
+
+  const application = {
+    scholarshipId,
+    scholarshipName,  
+    universityName,
+    scholarshipCategory,
+    degree,
+    applicationFees,
+    serviceCharge,
+    userId,
+    userName,
+    userEmail,
+    applicationStatus: "pending",
+    paymentStatus: "unpaid",
+    createdAt: new Date(),
+  };
+
   const result = await applicationsCollection.insertOne(application);
   res.send(result);
 });
+
+
+
+
 
 //get my-application
 
@@ -659,6 +697,8 @@ app.get("/reviews/user/:email", verifyFBToken, async (req, res) => {
     res.status(500).send({ message: "Server error" });
   }
 });
+
+
 
 
 
